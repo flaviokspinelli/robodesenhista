@@ -40,8 +40,10 @@ O resultado de produção é criado em `dist/`.
    trajetos é reconstruído do mesmo G-code para conferir o resultado.
 5. A tela simula os movimentos de desenho do arquivo G-code.
 
-Em desenvolvimento, a tela de prévia permite baixar `retrato.svg` e
-`retrato.gcode`. A configuração atual usa `M3 S0` para baixar a caneta e
+Em desenvolvimento, o botão **Comparar PNG e trajetos** mostra a imagem gerada,
+os movimentos do robô e as ferramentas para baixar `retrato.svg` e
+`retrato.gcode`. A tela de resultado permite salvar um PNG do desenho do robô.
+A configuração atual usa `M3 S0` para baixar a caneta e
 `M3 S90` para levantá-la; esses comandos devem ser calibrados para o servo e o
 firmware do robô real.
 

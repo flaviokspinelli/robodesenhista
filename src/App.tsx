@@ -59,14 +59,6 @@ const styles: Array<{ id: StyleId; label: string; description: string; image: st
   { id: 'infantil', label: 'Infantil', description: 'Fofa, simples e colorida', image: '/assets/style-infantil.png', accent: '#00b77a' },
 ]
 
-const staticAssets = [
-  '/robot-welcome.png',
-  '/robot-mascot.png',
-  '/assets/sample-photo.png',
-  '/assets/sample-drawing.png',
-  ...styles.map((style) => style.image),
-]
-
 function initialScreen(): Screen {
   const requested = new URLSearchParams(window.location.search).get('screen') as Screen | null
   return requested && screens.includes(requested) ? requested : 'inicio'
@@ -92,7 +84,7 @@ function Logo() { return <div className="logo" aria-label="Traço"><span>TRAÇO<
 function Progress({ screen }: { screen: Screen }) {
   const current = steps[screen]
   if (!current) return <span className="event-badge"><span /> Experiência ao vivo</span>
-  return <ol className="steps" aria-label={`Etapa ${current} de 4`}>{[1, 2, 3, 4].map((step) => <li className={step <= current ? 'active' : ''} key={step}>{step}</li>)}</ol>
+  return <div className="progress-header"><span>Etapa {current} de 4 · {['Estilo', 'Foto', 'Prévia', 'Desenho'][current - 1]}</span><ol className="steps" aria-label={`Etapa ${current} de 4`}>{[1, 2, 3, 4].map((step) => <li className={step < current ? 'completed' : step === current ? 'current' : ''} aria-current={step === current ? 'step' : undefined} key={step}>{step < current ? <Icon name="check" size={18}/> : step}</li>)}</ol></div>
 }
 
 function Header({ screen, onHome }: { screen: Screen; onHome: () => void }) {
@@ -107,12 +99,31 @@ function RobotBuddy({ message }: { message: string }) {
   return <aside className="robot-buddy" aria-label={`Robô diz: ${message}`}><div className="speech-bubble">{message}</div><img src="/robot-mascot.png" alt="Robô Traço segurando lápis" /></aside>
 }
 
+async function drawingPng(svg: string) {
+  const image = new Image()
+  const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }))
+  try {
+    image.src = url
+    await image.decode()
+    const canvas = document.createElement('canvas')
+    canvas.width = 1400
+    canvas.height = 1980
+    const context = canvas.getContext('2d')
+    if (!context) throw new Error('Não foi possível preparar a imagem.')
+    context.fillStyle = '#fff'
+    context.fillRect(0, 0, canvas.width, canvas.height)
+    context.drawImage(image, 0, 0, canvas.width, canvas.height)
+    return await new Promise<Blob>((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('Não foi possível salvar a imagem.')), 'image/png'))
+  } finally { URL.revokeObjectURL(url) }
+}
+
 function App() {
   const [screen, setScreen] = useState<Screen>(initialScreen)
   const [selectedStyle, setSelectedStyle] = useState<StyleId>('caricatura')
   const [photo, setPhoto] = useState<string | null>(null)
   const [cameraStatus, setCameraStatus] = useState<CameraStatus>('idle')
   const [cameraFacing, setCameraFacing] = useState<'user' | 'environment'>('user')
+  const [photoError, setPhotoError] = useState('')
   const [countdown, setCountdown] = useState<number | null>(null)
   const [drawingProgress, setDrawingProgress] = useState(0)
   const [simulationPaused, setSimulationPaused] = useState(false)
@@ -122,6 +133,8 @@ function App() {
   const [drawingPlan, setDrawingPlan] = useState<DrawingPlan | null>(null)
   const [generationStatus, setGenerationStatus] = useState<GenerationStatus>('idle')
   const [generationError, setGenerationError] = useState('')
+  const [shareFeedback, setShareFeedback] = useState('')
+  const [showDevelopmentPreview, setShowDevelopmentPreview] = useState(() => new URLSearchParams(window.location.search).get('debug') === '1')
   const [idleCountdown, setIdleCountdown] = useState<number | null>(null)
   const [idleTimerVersion, setIdleTimerVersion] = useState(0)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -134,21 +147,15 @@ function App() {
     setSelectedStyle('caricatura')
     setCameraFacing('user')
     setCameraStatus('idle')
+    setPhotoError('')
     setCountdown(null)
     setDrawingProgress(0)
     setGeneratedDrawing(null)
     setDrawingPlan(null)
     setGenerationStatus('idle')
     setGenerationError('')
+    setShareFeedback('')
     setIdleCountdown(null)
-  }, [])
-
-  useEffect(() => {
-    staticAssets.forEach((source) => {
-      const image = new Image()
-      image.src = source
-      void image.decode().catch(() => undefined)
-    })
   }, [])
 
   const stopCamera = () => { streamRef.current?.getTracks().forEach((track) => track.stop()); streamRef.current = null }
@@ -238,21 +245,25 @@ function App() {
   const handlePhoto = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
+    event.target.value = ''
+    if (!file.type.startsWith('image/') || file.size > 20 * 1024 * 1024) { setPhotoError('Escolha uma imagem de até 20 MB.'); return }
+    setPhotoError('')
     const sourceUrl = URL.createObjectURL(file)
     const image = new Image()
     image.onload = () => {
       const a4Photo = renderA4(image, image.naturalWidth, image.naturalHeight)
       URL.revokeObjectURL(sourceUrl)
       if (a4Photo) { setPhoto(a4Photo); setScreen('confirmar') }
+      else setPhotoError('Não foi possível preparar essa foto. Tente outra imagem.')
     }
-    image.onerror = () => URL.revokeObjectURL(sourceUrl)
+    image.onerror = () => { URL.revokeObjectURL(sourceUrl); setPhotoError('Não foi possível abrir essa foto. Tente outra imagem.') }
     image.src = sourceUrl
   }
   const takePhoto = async () => {
     if (cameraStatus !== 'ready' || countdown !== null) return
     for (const value of [3, 2, 1]) { setCountdown(value); await new Promise((resolve) => window.setTimeout(resolve, 650)) }
     const video = videoRef.current
-    if (!video?.videoWidth) { setCountdown(null); return }
+    if (!video?.videoWidth) { setCountdown(null); setPhotoError('A câmera não conseguiu capturar a foto. Tente novamente.'); return }
     const a4Photo = renderA4(video, video.videoWidth, video.videoHeight, cameraFacing === 'user')
     if (a4Photo) { setPhoto(a4Photo); setScreen('confirmar') }
     setCountdown(null)
@@ -329,29 +340,41 @@ function App() {
     link.click()
     window.setTimeout(() => URL.revokeObjectURL(link.href), 1000)
   }
-  const downloadDrawing = () => {
-    if (drawingPlan) {
-      downloadFile(drawingPlan.svg, 'meu-retrato-traco.svg', 'image/svg+xml')
-      return
-    }
-    const link = document.createElement('a')
-    link.href = generatedDrawing ?? '/assets/sample-drawing.png'
-    link.download = 'meu-retrato-traco.png'
-    link.click()
+  const downloadDrawing = async () => {
+    try {
+      if (drawingPlan) {
+        const blob = await drawingPng(drawingPlan.svg)
+        const link = document.createElement('a')
+        link.href = URL.createObjectURL(blob)
+        link.download = 'meu-retrato-traco.png'
+        link.click()
+        window.setTimeout(() => URL.revokeObjectURL(link.href), 1000)
+      } else {
+        const link = document.createElement('a')
+        link.href = generatedDrawing ?? '/assets/sample-drawing.png'
+        link.download = 'meu-retrato-traco.png'
+        link.click()
+      }
+      setShareFeedback('Imagem PNG salva no aparelho.')
+    } catch { setShareFeedback('Não foi possível salvar a imagem. Tente novamente.') }
   }
   const shareDrawing = async () => {
-    if (navigator.share) {
-      await navigator.share({ title: 'Meu retrato pelo robô Traço', text: 'Olha o retrato que o robô Traço desenhou!' }).catch(() => undefined)
-      return
-    }
-    downloadDrawing()
+    try {
+      if (drawingPlan && navigator.share) {
+        const file = new File([await drawingPng(drawingPlan.svg)], 'meu-retrato-traco.png', { type: 'image/png' })
+        if (navigator.canShare?.({ files: [file] })) {
+          await navigator.share({ title: 'Meu retrato Traço', files: [file] }).catch(() => undefined)
+          return
+        }
+      }
+      await downloadDrawing()
+    } catch { setShareFeedback('Não foi possível compartilhar. Baixe a imagem para enviar.') }
   }
   const photoSource = photo ?? '/assets/sample-photo.png'
   const drawingSource = drawingPlan
     ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(drawingPlan.svg)}`
     : generatedDrawing ?? '/assets/sample-drawing.png'
   const selectedStyleLabel = styles.find((style) => style.id === selectedStyle)?.label ?? 'Retrato'
-  const showDevelopmentPreview = import.meta.env.DEV || new URLSearchParams(window.location.search).get('debug') === '1'
   const preparing = generationStatus === 'generating' || generationStatus === 'vectorizing'
   const startSimulation = () => { setDrawingProgress(0); setSimulationPaused(false); setScreen('desenhando') }
   const sourcePaper = (source: string, label: string) => <svg className="source-paper" viewBox="0 0 210 297" role="img" aria-label={label}><rect width="210" height="297" fill="white"/><image href={source} x="12" y="12" width="186" height="273" preserveAspectRatio="xMidYMid meet"/></svg>
@@ -364,7 +387,7 @@ function App() {
 
         {screen === 'inicio' && <div className="hero-layout">
           <div className="hero-art" aria-hidden="true"><span className="orbit orbit-one"/><span className="orbit orbit-two"/><img src="/robot-welcome.png" alt=""/><span className="floating-note note-one">✦</span></div>
-          <Panel className="hero-panel" eyebrow="Retrato ao vivo em poucos minutos" title={<>Uma foto.<br/><em>Um desenho.</em><br/>Uma lembrança.</>} text="Escolha seu estilo, faça uma pose e veja o Traço transformar você em arte.">
+          <Panel className="hero-panel" eyebrow="Um retrato feito para você" title={<>Uma foto.<br/><em>Um desenho.</em><br/>Uma lembrança.</>} text="Escolha seu estilo, faça uma pose e veja o Traço transformar você em arte.">
             <div className="hero-actions"><button className="button button-primary button-large" type="button" onClick={() => setScreen('estilo')}>Quero meu retrato <Icon name="arrow" size={30}/></button><div className="trust-row"><span>1</span> escolha <i/> <span>2</span> pose <i/> <span>3</span> desenho</div></div>
           </Panel>
         </div>}
@@ -378,30 +401,31 @@ function App() {
         </div>}
 
         {screen === 'camera' && <div className="camera-layout">
-          <section className="camera-stage" aria-label="Câmera com enquadramento vertical A4"><video className={cameraStatus === 'ready' ? 'visible' : ''} ref={videoRef} muted playsInline/>{cameraStatus !== 'ready' && <div className="camera-message">{cameraStatus === 'error' ? <><Icon name="camera" size={42}/><strong>Câmera indisponível</strong><span>Você ainda pode enviar uma foto.</span></> : <><span className="spinner"/><strong>Abrindo a câmera…</strong></>}</div>}<div className="pose-frame" aria-hidden="true"><i/><i/><i/><i/><b>A4</b></div>{countdown !== null && <div className="countdown">{countdown}</div>}<span className="camera-ready"><i/> {cameraStatus === 'ready' ? 'Enquadramento A4' : 'Aguardando câmera'}</span></section>
+          <section className="camera-stage" aria-label="Câmera com enquadramento vertical A4"><video className={cameraStatus === 'ready' ? 'visible' : ''} ref={videoRef} muted playsInline/>{cameraStatus !== 'ready' && <div className="camera-message" role="status">{cameraStatus === 'error' ? <><Icon name="camera" size={42}/><strong>Câmera indisponível</strong><span>Envie uma foto para continuar.</span></> : <><span className="spinner"/><strong>Abrindo a câmera…</strong></>}</div>}<div className="pose-frame" aria-hidden="true"><i/><i/><i/><i/><b>A4</b></div>{countdown !== null && <div className="countdown">{countdown}</div>}<span className="camera-ready"><i/> {cameraStatus === 'ready' ? 'Enquadramento A4' : cameraStatus === 'error' ? 'Envie uma foto' : 'Aguardando câmera'}</span></section>
           <Panel eyebrow="Etapa 2 de 4" title={<>Faça sua <em>melhor pose!</em></>} text="Tudo que estiver dentro da moldura vertical será desenhado no papel A4.">
-            <div className="camera-actions"><label className="button button-ghost upload-control"><Icon name="upload"/> Enviar foto<input type="file" accept="image/*" capture="user" onChange={handlePhoto}/></label><button className="shutter" type="button" onClick={() => void takePhoto()} disabled={cameraStatus !== 'ready'} aria-label="Tirar foto"><Icon name="camera" size={38}/></button><button className="button button-ghost camera-flip" type="button" onClick={() => setCameraFacing((value) => value === 'user' ? 'environment' : 'user')} disabled={cameraStatus !== 'ready'}><Icon name="refresh"/> Virar câmera</button></div>
+            <div className="camera-actions"><label className={`button ${cameraStatus === 'ready' ? 'button-ghost' : 'button-primary'} upload-control`}><Icon name="upload"/> Enviar foto<input type="file" accept="image/*" aria-label="Enviar foto" onChange={handlePhoto}/></label><button className="shutter" type="button" onClick={() => void takePhoto()} disabled={cameraStatus !== 'ready'} aria-label="Tirar foto"><Icon name="camera" size={38}/></button><button className="button button-ghost camera-flip" type="button" onClick={() => setCameraFacing((value) => value === 'user' ? 'environment' : 'user')} disabled={cameraStatus !== 'ready'} aria-label="Virar câmera"><Icon name="refresh"/><span>Virar câmera</span></button></div>
+            {photoError && <p className="inline-error" role="alert">{photoError}</p>}
             <button className="text-button" type="button" onClick={() => setScreen('estilo')}><Icon name="back" size={19}/> Trocar estilo</button>
           </Panel>
         </div>}
 
-        {screen === 'confirmar' && <div className="workflow-layout photo-layout"><figure className="photo-card tilted-left"><img src={photoSource} alt="Foto escolhida"/><figcaption>Sua foto</figcaption></figure><Panel eyebrow="Foto pronta" title={<>Gostou dessa <em>pose?</em></>} text="Se estiver do jeito que você quer, eu já posso começar a criar."><div className="stack-actions"><button className="button button-primary button-large" type="button" onClick={() => void startGeneration()}><Icon name="check"/> Criar meu desenho</button><button className="button button-ghost" type="button" onClick={() => setScreen('camera')}><Icon name="refresh"/> Tirar outra</button></div></Panel></div>}
+        {screen === 'confirmar' && <div className="workflow-layout photo-layout"><figure className="photo-card tilted-left"><img src={photoSource} alt="Foto escolhida"/><figcaption>Sua foto</figcaption></figure><Panel eyebrow={`Estilo ${selectedStyleLabel}`} title={<>Gostou dessa <em>pose?</em></>} text="Confira o enquadramento. O desenho vai seguir o estilo que você escolheu."><div className="stack-actions"><button className="button button-primary button-large" type="button" onClick={() => void startGeneration()}><Icon name="check"/> Criar meu desenho</button><button className="button button-ghost" type="button" onClick={() => setScreen('camera')}><Icon name="refresh"/> Tirar outra</button></div></Panel></div>}
 
         {screen === 'previa' && <div className={`preview-layout ${showDevelopmentPreview ? 'development-preview' : ''}`}>
-          <div className={`comparison ${showDevelopmentPreview ? 'development-comparison' : ''}`} aria-label="Comparação da foto, PNG e trajetos do G-code na mesma escala">
+          <div className={`comparison ${showDevelopmentPreview ? 'development-comparison' : ''}`} aria-label={showDevelopmentPreview ? 'Comparação da foto, PNG e trajetos do G-code na mesma escala' : 'Comparação da foto e do desenho'}>
             <figure><figcaption>Foto</figcaption><img src={photoSource} alt="Foto original"/></figure>
-            {showDevelopmentPreview && <figure className="ai-png-card"><figcaption>PNG da IA</figcaption>{generatedDrawing && sourcePaper(generatedDrawing, 'PNG original da IA')}</figure>}
+            {showDevelopmentPreview && <figure className="ai-png-card"><figcaption>PNG da IA</figcaption>{generatedDrawing ? sourcePaper(generatedDrawing, 'PNG original da IA') : <div className="empty-paper">O desenho gerado aparecerá aqui</div>}</figure>}
             <figure className="drawing-card">
-              <figcaption>{showDevelopmentPreview ? 'Trajetos · G-code' : 'Prévia do desenho'}</figcaption>
-              {drawingPlan ? <img src={drawingSource} alt="Simulação da tinta depositada pelo G-code"/> : <div className="generation-placeholder">{preparing && <span className="spinner"/>}<strong>{generationStatus === 'error' ? 'Geração interrompida' : generationStatus === 'idle' ? 'Pronto para comparar' : generationStatus === 'vectorizing' ? 'Ajustando os trajetos…' : 'Criando seu desenho…'}</strong><small>{generationStatus === 'vectorizing' ? 'Comparando a tinta da caneta com o PNG' : generationStatus === 'idle' ? 'Envie um PNG no painel de testes' : ''}</small></div>}
+              <figcaption>{showDevelopmentPreview ? 'Trajetos · G-code' : 'Desenho do robô'}</figcaption>
+              {drawingPlan ? <img src={drawingSource} alt="Simulação da tinta depositada pelo G-code"/> : <div className="generation-placeholder" role="status">{preparing && <span className="spinner"/>}<strong>{generationStatus === 'error' ? 'Não foi possível preparar' : generationStatus === 'idle' ? 'Seu desenho aparecerá aqui' : generationStatus === 'vectorizing' ? 'Preparando os traços…' : 'Criando seu desenho…'}</strong><small>{generationStatus === 'vectorizing' ? 'Ajustando os movimentos da caneta' : generationStatus === 'idle' ? showDevelopmentPreview ? 'Teste um exemplo ou envie um PNG' : 'Escolha uma foto para começar' : 'Aguarde um momento'}</small></div>}
             </figure>
           </div>
-          <Panel eyebrow="Etapa 3 de 4" title={generationStatus === 'error' ? <>Algo não <em>funcionou.</em></> : generationStatus === 'ready' ? <>Confira seu <em>desenho!</em></> : preparing ? <>Preparando sua <em>arte…</em></> : <>Teste os <em>traços.</em></>} text={generationStatus === 'error' ? generationError : generationStatus === 'ready' ? 'Esta prévia simula os trajetos do arquivo com a espessura de caneta selecionada.' : 'Os detalhes e as áreas pretas são convertidos em movimentos de caneta.'}>
+          <Panel eyebrow="Etapa 3 de 4" title={generationStatus === 'error' ? <>Algo não <em>funcionou.</em></> : generationStatus === 'ready' ? <>Confira seu <em>desenho!</em></> : preparing ? <>Preparando seu <em>retrato…</em></> : <>Veja seu <em>desenho.</em></>} text={generationStatus === 'error' ? generationError : generationStatus === 'ready' ? 'Esta prévia mostra os traços que o robô fará com a caneta.' : preparing ? 'Estamos transformando sua foto em traços para o robô desenhar.' : 'Escolha uma foto para começar.'}>
             <div className="stack-actions">
               {generationStatus === 'ready' && <button className="button button-primary" type="button" onClick={startSimulation}>Ver desenho sendo feito <Icon name="arrow"/></button>}
+              {showDevelopmentPreview && generationStatus === 'idle' && <button className="button button-primary" type="button" onClick={() => void revectorizeDrawing('/assets/style-realista.png')}>Testar exemplo local <Icon name="arrow"/></button>}
               {generationStatus === 'error' && <button className="button button-primary" type="button" onClick={() => generatedDrawing ? void revectorizeDrawing() : void startGeneration()}><Icon name="refresh"/> Tentar novamente</button>}
-              {showDevelopmentPreview && <div className="technical-downloads">
-                <span>Teste de produção · caneta e papel A4</span>
+              {showDevelopmentPreview && <details className="technical-downloads"><summary>Ferramentas de desenvolvimento</summary><div className="technical-grid">
                 <label className="pen-setting">Espessura real da caneta
                   <select aria-label="Espessura real da caneta" value={penWidthMm} disabled={preparing} onChange={(event) => { const pen = Number(event.target.value); setPenWidthMm(pen); if (generatedDrawing) void revectorizeDrawing(generatedDrawing, pen) }}>
                     {[.15, .2, .3, .4, .5].map((pen) => <option key={pen} value={pen}>{pen.toLocaleString('pt-BR')} mm</option>)}
@@ -416,24 +440,25 @@ function App() {
                   <button type="button" onClick={() => downloadFile(drawingPlan.svg, 'retrato-trajetos.svg', 'image/svg+xml')}>Baixar SVG de trajetos</button>
                   <button type="button" onClick={() => downloadFile(drawingPlan.gcode, 'retrato.gcode', 'text/plain')}>Baixar G-code</button>
                 </>}
-              </div>}
+              </div></details>}
               <button className="button button-ghost" type="button" disabled={preparing} onClick={() => setScreen('estilo')}>Escolher outro estilo</button>
+              {import.meta.env.DEV && <button className="text-button debug-toggle" type="button" aria-pressed={showDevelopmentPreview} onClick={() => setShowDevelopmentPreview((value) => !value)}>{showDevelopmentPreview ? 'Ocultar comparação técnica' : 'Comparar PNG e trajetos'}</button>}
             </div>
           </Panel>
         </div>}
 
         {screen === 'desenhando' && <div className="drawing-layout">
           <section className="drawing-live"><div className="paper-sheet"><DrawingPreview plan={drawingPlan} progress={drawingProgress}/><span className="trajectory-badge"><i/> Simulação acelerada do G-code</span></div></section>
-          <Panel eyebrow="Prévia dos movimentos" title={<>Veja cada <em>traço aparecer.</em></>} text="A ordem e a largura dos traços vêm do mesmo arquivo que você pode baixar.">
+          <Panel eyebrow="Etapa 4 de 4" title={<>Veja cada <em>traço aparecer.</em></>} text="A simulação segue a ordem dos movimentos que o robô fará no papel.">
             <div className="progress-block"><div><span>Progresso da simulação</span><strong>{Math.round(drawingProgress)}%</strong></div><input aria-label="Progresso da simulação" type="range" min="0" max="100" step=".1" value={drawingProgress} onChange={(event) => { setSimulationPaused(true); setDrawingProgress(Number(event.target.value)) }}/></div>
-            <div className="action-row"><button className="button button-primary" type="button" onClick={() => { if (drawingProgress >= 100) setDrawingProgress(0); setSimulationPaused((value) => drawingProgress >= 100 ? false : !value) }}>{drawingProgress >= 100 ? 'Repetir' : simulationPaused ? 'Continuar' : 'Pausar'}</button><button className="button button-ghost" type="button" onClick={() => setScreen('previa')}>Voltar à comparação</button></div>
+            <div className="action-row simulation-actions"><button className="button button-primary" type="button" onClick={() => drawingProgress >= 100 ? setScreen('pronto') : setSimulationPaused((value) => !value)}>{drawingProgress >= 100 ? 'Ver resultado' : simulationPaused ? 'Continuar' : 'Pausar'}</button><button className="button button-ghost" type="button" onClick={() => drawingProgress >= 100 ? (setDrawingProgress(0), setSimulationPaused(false)) : setScreen('pronto')}>{drawingProgress >= 100 ? 'Repetir simulação' : 'Ver resultado'}</button></div>
             <div className="event-tip"><Icon name="sparkle"/><span>Simulação de caneta com {drawingPlan?.penWidthMm.toLocaleString('pt-BR')} mm. Nenhum comando é enviado ao robô nesta tela.</span></div>
           </Panel>
         </div>}
 
-        {screen === 'pronto' && <div className="ready-layout"><div className="final-art"><span className="tape tape-one"/><span className="tape tape-two"/><img src={drawingSource} alt="Retrato finalizado"/></div><Panel eyebrow="Seu retrato está pronto" title={<>Tcharam! Ficou <em>incrível.</em></>} text="O arquivo do desenho está pronto. Você pode guardar a versão digital."><div className="stack-actions"><button className="button button-primary button-large" type="button" onClick={() => setScreen('compartilhar')}><Icon name="share"/> Quero compartilhar</button><button className="button button-ghost" type="button" onClick={downloadDrawing}><Icon name="download"/> Baixar desenho</button><button className="button button-new-session" type="button" onClick={goHome}><Icon name="refresh"/> Fazer outro retrato</button></div></Panel><div className="confetti" aria-hidden="true">✦ <i/> ● <i/> ✦</div></div>}
+        {screen === 'pronto' && <div className="ready-layout"><div className="final-art"><span className="tape tape-one"/><span className="tape tape-two"/><img src={drawingSource} alt="Retrato finalizado"/></div><Panel eyebrow="Desenho digital pronto" title={<>Seu retrato <em>ganhou vida!</em></>} text="Veja o resultado e guarde uma imagem do desenho para compartilhar."><div className="stack-actions"><button className="button button-primary button-large" type="button" onClick={() => { setShareFeedback(''); setScreen('compartilhar') }}><Icon name="share"/> Compartilhar retrato</button><button className="button button-ghost" type="button" onClick={() => void downloadDrawing()}><Icon name="download"/> Baixar imagem PNG</button><button className="button button-new-session" type="button" onClick={goHome}><Icon name="refresh"/> Fazer outro retrato</button>{shareFeedback && <p className="share-feedback" role="status">{shareFeedback}</p>}</div></Panel><div className="confetti" aria-hidden="true">✦ <i/> ● <i/> ✦</div></div>}
 
-        {screen === 'compartilhar' && <div className="share-layout"><div className="share-card"><img src={drawingSource} alt="Seu retrato"/><div className="share-stamp"><Logo/><span>feito ao vivo</span></div></div><Panel eyebrow="Leve essa lembrança com você" title={<>Compartilhe seu <em>momento.</em></>} text="Baixe a imagem ou use o compartilhamento do aparelho para enviar e postar nas redes sociais."><div className="action-row share-actions"><button className="button button-ghost" type="button" onClick={downloadDrawing}><Icon name="download"/> Baixar</button><button className="button button-primary" type="button" onClick={() => void shareDrawing()}><Icon name="share"/> Compartilhar</button></div><button className="button button-new-session restart" type="button" onClick={goHome}><Icon name="refresh"/> Fazer outro retrato</button></Panel></div>}
+        {screen === 'compartilhar' && <div className="share-layout"><div className="share-card"><img src={drawingSource} alt="Seu retrato"/><div className="share-stamp"><Logo/><span>feito ao vivo</span></div></div><Panel eyebrow="Leve essa lembrança com você" title={<>Compartilhe seu <em>momento.</em></>} text="Salve a imagem ou compartilhe diretamente pelo aparelho."><div className="action-row share-actions"><button className="button button-ghost" type="button" onClick={() => void downloadDrawing()}><Icon name="download"/> Baixar PNG</button><button className="button button-primary" type="button" onClick={() => void shareDrawing()}><Icon name="share"/> Compartilhar</button></div>{shareFeedback && <p className="share-feedback" role="status">{shareFeedback}</p>}<button className="button button-new-session restart" type="button" onClick={goHome}><Icon name="refresh"/> Fazer outro retrato</button></Panel></div>}
       </div>
 
       {idleCountdown !== null && <div className="idle-overlay" role="dialog" aria-modal="true" aria-labelledby="idle-title" aria-describedby="idle-description"><section className="idle-dialog"><span className="idle-counter" aria-label={`${idleCountdown} segundos restantes`}>{idleCountdown}</span><div><span className="eyebrow">Pausa por inatividade</span><h2 id="idle-title">Ainda está por aí?</h2><p id="idle-description">Vamos preparar a experiência para um novo retrato.</p></div><button className="button button-primary button-large" type="button" onClick={() => setIdleTimerVersion((value) => value + 1)}>Continuar aqui</button></section></div>}
