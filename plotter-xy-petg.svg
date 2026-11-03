@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="570" viewBox="0 0 900 570" role="img" aria-labelledby="title desc">
+  <title id="title">Plotter cartesiana com peças mecânicas impressas em PETG</title>
+  <desc id="desc">Esquema de dois deslizadores impressos em PETG e perpendiculares, movidos por motores NEMA 17 com pinhões e cremalheiras impressos. A caneta fica no carro X.</desc>
+  <defs><style>text{font-family:Arial,Helvetica,sans-serif;fill:#1c2938}.t{font-size:28px;font-weight:bold}.s{font-size:17px}.l{font-size:19px;font-weight:bold}.rail{fill:#e6eef6;stroke:#476985;stroke-width:4}.car{fill:#c8ead7;stroke:#27835d;stroke-width:3}.rack{stroke:#ec8735;stroke-width:13;stroke-dasharray:7 4}.lead{stroke:#738294;stroke-width:2;fill:none}</style></defs>
+  <rect width="900" height="570" fill="white"/>
+  <text x="36" y="48" class="t">Versão simples: estrutura 100% impressa em PETG</text>
+  <text x="36" y="76" class="s">Vista de cima • área de desenho inicial: cerca de 8 × 8 cm</text>
+  <rect x="75" y="120" width="560" height="390" rx="12" fill="#f5f7fa" stroke="#9daab7" stroke-width="3"/>
+  <rect x="208" y="170" width="320" height="280" fill="#fffdf5" stroke="#d5cbb8" stroke-width="2"/>
+  <text x="449" y="435" class="s">papel</text>
+
+  <!-- Eixo Y fixo e seu carro -->
+  <rect x="100" y="145" width="68" height="340" rx="10" class="rail"/>
+  <line x1="132" y1="163" x2="132" y2="465" class="rack"/>
+  <rect x="91" y="275" width="86" height="78" rx="8" class="car"/>
+  <rect x="95" y="280" width="57" height="57" rx="7" fill="#d8e0e9" stroke="#4c5969" stroke-width="3"/>
+  <circle cx="132" cy="308" r="13" fill="#ec8735" stroke="#a95216" stroke-width="3"/>
+  <text x="30" y="370" class="l">Motor Y</text>
+  <text x="30" y="393" class="s">pinhão PETG</text>
+
+  <!-- Eixo X ligado ao carro Y -->
+  <rect x="152" y="291" width="437" height="49" rx="9" class="rail"/>
+  <line x1="178" y1="316" x2="569" y2="316" class="rack"/>
+  <rect x="341" y="275" width="132" height="79" rx="8" class="car"/>
+  <rect x="344" y="225" width="57" height="57" rx="7" fill="#d8e0e9" stroke="#4c5969" stroke-width="3"/>
+  <circle cx="372" cy="299" r="13" fill="#ec8735" stroke="#a95216" stroke-width="3"/>
+  <circle cx="438" cy="316" r="12" fill="#fff" stroke="#27835d" stroke-width="4"/>
+  <circle cx="438" cy="316" r="4" fill="#1c2938"/>
+  <text x="338" y="210" class="l">Motor X</text>
+  <text x="474" y="268" class="l">Caneta</text>
+  <path d="M485 274 L451 299" class="lead"/>
+  <text x="311" y="384" class="s">carro X desliza na guia impressa</text>
+
+  <rect x="664" y="146" width="210" height="269" rx="12" fill="#f3f6fa" stroke="#c2ccd6"/>
+  <text x="681" y="179" class="l">Imprimir em PETG</text>
+  <text x="681" y="216" class="s">• base e guia Y</text>
+  <text x="681" y="249" class="s">• carro Y e guia X</text>
+  <text x="681" y="282" class="s">• carro da caneta</text>
+  <text x="681" y="315" class="s">• 2 cremalheiras</text>
+  <text x="681" y="348" class="s">• 2 pinhões</text>
+  <text x="681" y="392" class="s">Sem guias compradas.</text>
+  <text x="680" y="449" class="s">Peças não impressas: motores,</text>
+  <text x="680" y="472" class="s">eletrônica e caneta.</text>
+  <text x="36" y="549" class="s">Primeiro teste: desenhar linhas contínuas; levantar a caneta à mão entre desenhos.</text>
+</svg>

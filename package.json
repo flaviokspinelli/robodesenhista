@@ -1,0 +1,30 @@
+{
+  "name": "traco-kiosk",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc -b && vite build",
+    "test": "tsx --test tests/*.test.ts",
+    "qa:quality": "tsx scripts/check-quality.ts",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "dependencies": {
+    "@fontsource/fredoka": "^5.3.0",
+    "@vitejs/plugin-react": "latest",
+    "d3-contour": "^4.0.2",
+    "react": "latest",
+    "react-dom": "latest",
+    "sharp": "^0.35.5",
+    "typescript": "latest",
+    "vite": "latest"
+  },
+  "devDependencies": {
+    "@types/d3-contour": "^3.0.6",
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "tsx": "^4.23.15"
+  }
+}

@@ -1,0 +1,26 @@
+TRACO V1 01 base compacta | translation 0.0 0.0 0.0 mm | bbox -74.0 -74.0 -0.0 / 74.0 74.0 10.0 mm
+TRACO V1 02 mancal inferior | translation 0.0 0.0 10.0 mm | bbox -38.0 -38.0 10.0 / 38.0 38.0 19.0 mm
+TRACO V1 03 mancal superior | translation 0.0 0.0 47.0 mm | bbox -38.0 -38.0 47.0 / 38.0 38.0 56.0 mm
+TRACO V1 04 coluna espaçadora 1 | translation 28.0 28.0 19.0 mm | bbox 21.0 21.0 19.0 / 35.0 35.0 47.0 mm
+TRACO V1 04 coluna espaçadora 2 | translation 28.0 -28.0 19.0 mm | bbox 21.0 -35.0 19.0 / 35.0 -21.0 47.0 mm
+TRACO V1 04 coluna espaçadora 3 | translation -28.0 28.0 19.0 mm | bbox -35.0 21.0 19.0 / -21.0 35.0 47.0 mm
+TRACO V1 04 coluna espaçadora 4 | translation -28.0 -28.0 19.0 mm | bbox -35.0 -35.0 19.0 / -21.0 -21.0 47.0 mm
+TRACO V1 05 plataforma giratoria | translation 0.0 0.0 56.0 mm | bbox -58.0 -58.0 56.0 / 58.0 58.0 68.0 mm
+TRACO V1 06 torre direita | translation 0.0 34.0 132.0 mm | bbox -50.0 25.0 68.0 / 48.0 34.0 187.0 mm
+TRACO V1 06 torre esquerda | translation 0.0 -25.0 132.0 mm | bbox -50.0 -34.0 68.0 / 48.0 -25.0 187.0 mm
+TRACO V1 07 suporte motor base | translation -72.0 0.0 56.0 mm | bbox -104.0 -32.0 56.0 / -40.0 32.0 64.0 mm
+TRACO V1 08 suporte motor ombro | translation -61.0 -42.0 126.0 mm | bbox -93.0 -50.0 94.0 / -29.0 -42.0 158.0 mm
+TRACO V1 09 suporte motor cotovelo | translation 36.0 -46.0 198.0 mm | bbox -8.8 -54.0 153.2 / 80.8 -46.0 242.8 mm
+TRACO V1 10 braco superior direita | translation 0.0 25.0 150.0 mm | bbox -29.8 17.0 119.6 / 149.8 25.0 340.4 mm
+TRACO V1 11 antebraco direita | translation 120.0 15.0 310.0 mm | bbox 92.8 7.0 197.9 / 327.2 15.0 334.9 mm
+TRACO V1 10 braco superior esquerda | translation 0.0 -17.0 150.0 mm | bbox -29.8 -25.0 119.6 / 149.8 -17.0 340.4 mm
+TRACO V1 11 antebraco esquerda | translation 120.0 -7.0 310.0 mm | bbox 92.8 -15.0 197.9 / 327.2 -7.0 334.9 mm
+TRACO V1 12 haste paralela superior | translation 0.0 46.0 180.0 mm | bbox -13.4 39.0 165.4 / 133.4 46.0 354.6 mm
+TRACO V1 13 haste paralela inferior | translation 120.0 46.0 340.0 mm | bbox 105.2 39.0 240.8 / 314.8 46.0 352.0 mm
+TRACO V1 14 ancora fixa haste | translation 0.0 46.0 150.0 mm | bbox -11.0 38.0 135.0 / 11.0 46.0 195.0 mm
+TRACO V1 15 balancim cotovelo | translation 120.0 46.0 310.0 mm | bbox 109.0 38.0 295.0 / 131.0 46.0 355.0 mm
+TRACO V1 16 cabeca vertical | translation 300.0 46.0 222.8 mm | bbox 283.0 36.0 202.8 / 317.0 46.0 273.8 mm
+TRACO V1 17 porta caneta 10mm | translation 300.0 51.0 163.0 mm | bbox 285.0 36.0 163.0 / 315.0 66.0 201.0 mm
+TRACO V1 18 carenagem superior direita | translation 0.0 36.0 150.0 mm | bbox -28.8 33.0 122.8 / 147.0 36.0 334.8 mm
+TRACO V1 19 carenagem superior esquerda | translation 0.0 -29.0 150.0 mm | bbox -28.8 -32.0 122.8 / 147.0 -29.0 334.8 mm
+TRACO V1 20 carenagem base | translation 0.0 0.0 65.0 mm | bbox -70.0 -70.0 65.0 / 70.0 70.0 69.0 mm

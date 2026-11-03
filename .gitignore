@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+qa/toolpaths/*.gcode
+qa/toolpaths/*-plan.json
+qa/toolpaths/baseline/
+qa/toolpaths/*-0.*.svg
+qa/
+cad/referencias/
+cad/__pycache__/
+cad/*.log
+cad/*.zip
